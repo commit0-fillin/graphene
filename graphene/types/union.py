@@ -58,4 +58,4 @@ class Union(UnmountedType, BaseType):
         This function is called when the unmounted type (Union instance)
         is mounted (as a Field, InputField or Argument)
         """
-        pass
+        return cls
