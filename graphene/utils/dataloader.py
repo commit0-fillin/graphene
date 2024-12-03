@@ -31,7 +31,26 @@ class DataLoader(object):
         """
         Loads a key, returning a `Future` for the value represented by that key.
         """
-        pass
+        if key is None:
+            raise ValueError("The load method requires a key")
+
+        cache_key = self.get_cache_key(key)
+
+        if self.cache and cache_key in self._cache:
+            return self._cache[cache_key]
+
+        future = self._loop.create_future() if self._loop else get_event_loop().create_future()
+        self._queue.append(Loader(key=key, future=future))
+
+        if self.cache:
+            self._cache[cache_key] = future
+
+        if not self.batch:
+            ensure_future(dispatch_queue(self))
+        elif len(self._queue) >= (self.max_batch_size or float('inf')):
+            ensure_future(dispatch_queue(self))
+
+        return future
 
     def load_many(self, keys):
         """
@@ -46,14 +65,20 @@ class DataLoader(object):
         >>>    my_loader.load('b')
         >>> )
         """
-        pass
+        if not isinstance(keys, Iterable):
+            raise TypeError("The loader.load_many() method must be called with Iterable<key> but got: {}".format(keys))
+
+        return gather(*[self.load(key) for key in keys])
 
     def clear(self, key):
         """
         Clears the value at `key` from the cache, if it exists. Returns itself for
         method chaining.
         """
-        pass
+        cache_key = self.get_cache_key(key)
+        if cache_key in self._cache:
+            del self._cache[cache_key]
+        return self
 
     def clear_all(self):
         """
@@ -61,25 +86,69 @@ class DataLoader(object):
         invalidations across this particular `DataLoader`. Returns itself for
         method chaining.
         """
-        pass
+        self._cache.clear()
+        return self
 
     def prime(self, key, value):
         """
-        Adds the provied key and value to the cache. If the key already exists, no
+        Adds the provided key and value to the cache. If the key already exists, no
         change is made. Returns itself for method chaining.
         """
-        pass
+        cache_key = self.get_cache_key(key)
+        if cache_key not in self._cache:
+            future = self._loop.create_future() if self._loop else get_event_loop().create_future()
+            future.set_result(value)
+            self._cache[cache_key] = future
+        return self
 
 def dispatch_queue(loader):
     """
     Given the current state of a Loader instance, perform a batch load
     from its current queue.
     """
-    pass
+    queue = loader._queue
+    loader._queue = []
+
+    if not queue:
+        return
+
+    keys = [l.key for l in queue]
+    try:
+        batch_future = loader.batch_load_fn(keys)
+        if not iscoroutine(batch_future):
+            raise ValueError("DataLoader batch_load_fn must return a coroutine.")
+    except Exception as e:
+        return failed_dispatch(loader, queue, e)
+
+    def batch_callback(results):
+        if len(results) != len(keys):
+            return failed_dispatch(
+                loader,
+                queue,
+                ValueError(
+                    "DataLoader must resolve a list of the same length as the list of keys."
+                    "\nExpected {} values, received {}.".format(len(keys), len(results))
+                ),
+            )
+
+        for l, value in zip(queue, results):
+            if isinstance(value, Exception):
+                l.future.set_exception(value)
+            else:
+                l.future.set_result(value)
+
+        return results
+
+    return ensure_future(batch_future).add_done_callback(
+        lambda future: batch_callback(future.result())
+    )
 
 def failed_dispatch(loader, queue, error):
     """
     Do not cache individual loads if the entire batch dispatch fails,
     but still reject each request so they do not hang.
     """
-    pass
+    for l in queue:
+        if loader.cache:
+            loader.clear(l.key)
+        l.future.set_exception(error)
