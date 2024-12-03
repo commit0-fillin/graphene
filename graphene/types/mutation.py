@@ -98,4 +98,12 @@ class Mutation(ObjectType):
     @classmethod
     def Field(cls, name=None, description=None, deprecation_reason=None, required=False):
         """Mount instance of mutation Field."""
-        pass
+        return Field(
+            cls,
+            args=cls._meta.arguments,
+            resolver=cls._meta.resolver,
+            name=name,
+            description=description or cls._meta.description,
+            deprecation_reason=deprecation_reason,
+            required=required,
+        )
