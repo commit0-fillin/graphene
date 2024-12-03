@@ -1,5 +1,5 @@
 from .unmountedtype import UnmountedType
-from .utils import get_type
+from .utils import get_type, get_underlying_type
 
 class Structure(UnmountedType):
     """
@@ -20,7 +20,7 @@ class Structure(UnmountedType):
         This function is called when the unmounted type (List or NonNull instance)
         is mounted (as a Field, InputField or Argument)
         """
-        pass
+        return get_type(self._of_type)
 
 class List(Structure):
     """
