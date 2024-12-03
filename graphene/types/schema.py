@@ -38,7 +38,15 @@ class TypeMap(dict):
 
     def get_function_for_type(self, graphene_type, func_name, name, default_value):
         """Gets a resolve or subscribe function for a given ObjectType"""
-        pass
+        if isinstance(graphene_type, GrapheneGraphQLType):
+            graphene_type = graphene_type.graphene_type
+        
+        if isinstance(graphene_type, type) and issubclass(graphene_type, ObjectType):
+            func = getattr(graphene_type, func_name, None)
+            if func:
+                return func
+        
+        return default_value
 
 class Schema:
     """Schema Definition.
@@ -108,18 +116,26 @@ class Schema:
         Returns:
             :obj:`ExecutionResult` containing any data and errors for the operation.
         """
-        pass
+        return graphql_sync(self.graphql_schema, *args, **kwargs)
 
     async def execute_async(self, *args, **kwargs):
         """Execute a GraphQL query on the schema asynchronously.
         Same as `execute`, but uses `graphql` instead of `graphql_sync`.
         """
-        pass
+        return await graphql(self.graphql_schema, *args, **kwargs)
 
     async def subscribe(self, query, *args, **kwargs):
         """Execute a GraphQL subscription on the schema asynchronously."""
-        pass
+        document = parse(query)
+        return await subscribe(self.graphql_schema, document, *args, **kwargs)
 
 def normalize_execute_kwargs(kwargs):
     """Replace alias names in keyword arguments for graphql()"""
-    pass
+    for old, new in [
+        ("context", "context_value"),
+        ("root", "root_value"),
+        ("variables", "variable_values"),
+    ]:
+        if old in kwargs:
+            kwargs[new] = kwargs.pop(old)
+    return kwargs
