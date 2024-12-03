@@ -9,7 +9,7 @@ def is_node(objecttype):
     """
     Check if the given objecttype has Node as an interface
     """
-    pass
+    return Node in objecttype._meta.interfaces
 
 class GlobalID(Field):
 
