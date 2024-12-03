@@ -69,10 +69,3 @@ class Enum(UnmountedType, BaseType, metaclass=EnumMeta):
             setattr(cls, key, value)
         super(Enum, cls).__init_subclass_with_meta__(_meta=_meta, **options)
 
-    @classmethod
-    def get_type(cls):
-        """
-        This function is called when the unmounted type (Enum instance)
-        is mounted (as a Field, InputField or Argument)
-        """
-        pass
