@@ -8,15 +8,29 @@ def get_field_as(value, _as=None):
     """
     Get type mounted
     """
-    pass
+    if isinstance(value, MountedType):
+        return value
+    elif isinstance(value, UnmountedType):
+        return value.mount(_as)
+    return _as(value) if _as else value
 
 def yank_fields_from_attrs(attrs, _as=None, sort=True):
     """
     Extract all the fields in given attributes (dict)
     and return them ordered
     """
-    pass
+    fields = {}
+    for key, value in attrs.items():
+        if isinstance(value, (MountedType, UnmountedType)):
+            fields[key] = get_field_as(value, _as)
+    
+    if sort:
+        fields = dict(sorted(fields.items(), key=lambda f: f[1]))
+    
+    return fields
 
 def get_underlying_type(_type):
     """Get the underlying type even if it is wrapped in structures like NonNull"""
-    pass
+    while hasattr(_type, 'of_type'):
+        _type = _type.of_type
+    return _type
