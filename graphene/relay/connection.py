@@ -20,7 +20,12 @@ class PageInfo(ObjectType):
 
 def page_info_adapter(startCursor, endCursor, hasPreviousPage, hasNextPage):
     """Adapter for creating PageInfo instances"""
-    pass
+    return PageInfo(
+        start_cursor=startCursor,
+        end_cursor=endCursor,
+        has_previous_page=hasPreviousPage,
+        has_next_page=hasNextPage
+    )
 
 class ConnectionOptions(ObjectTypeOptions):
     node = None
@@ -53,7 +58,15 @@ class Connection(ObjectType):
 
 def connection_adapter(cls, edges, pageInfo):
     """Adapter for creating Connection instances"""
-    pass
+    return cls(
+        edges=edges,
+        page_info=page_info_adapter(
+            startCursor=pageInfo.get('startCursor'),
+            endCursor=pageInfo.get('endCursor'),
+            hasPreviousPage=pageInfo.get('hasPreviousPage'),
+            hasNextPage=pageInfo.get('hasNextPage')
+        )
+    )
 
 class IterableConnectionField(Field):
 
