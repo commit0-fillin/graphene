@@ -17,16 +17,29 @@ class ObjectTypeOptions(BaseOptions):
 class ObjectTypeMeta(BaseTypeMeta):
 
     def __new__(cls, name_, bases, namespace, **options):
-
+        # Create an intermediate class
         class InterObjectType:
             pass
+        
+        # Create the base class using super().__new__
         base_cls = super().__new__(cls, name_, (InterObjectType,) + bases, namespace, **options)
+        
+        # If the base class has a _meta attribute
         if base_cls._meta:
-            fields = [(key, 'typing.Any', field(default=field_value.default_value if isinstance(field_value, Field) else None)) for key, field_value in base_cls._meta.fields.items()]
+            # Create fields for the dataclass
+            fields = [
+                (key, 'typing.Any', field(default=field_value.default_value if isinstance(field_value, Field) else None))
+                for key, field_value in base_cls._meta.fields.items()
+            ]
+            
+            # Create a dataclass with the same name and fields
             dataclass = make_dataclass(name_, fields, bases=())
+            
+            # Copy the dataclass methods to InterObjectType
             InterObjectType.__init__ = dataclass.__init__
             InterObjectType.__eq__ = dataclass.__eq__
             InterObjectType.__repr__ = dataclass.__repr__
+        
         return base_cls
 
 class ObjectType(BaseType, metaclass=ObjectTypeMeta):
