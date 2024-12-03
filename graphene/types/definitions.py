@@ -12,7 +12,7 @@ class GrapheneGraphQLType:
         super(GrapheneGraphQLType, self).__init__(*args, **kwargs)
 
     def __copy__(self):
-        result = GrapheneGraphQLType(graphene_type=self.graphene_type)
+        result = self.__class__(graphene_type=self.graphene_type)
         result.__dict__.update(self.__dict__)
         return result
 
