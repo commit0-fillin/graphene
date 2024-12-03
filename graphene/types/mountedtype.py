@@ -8,4 +8,6 @@ class MountedType(OrderedType):
         """
         Mount the UnmountedType instance
         """
-        pass
+        if isinstance(unmounted, UnmountedType):
+            return unmounted.get_type()
+        return unmounted
